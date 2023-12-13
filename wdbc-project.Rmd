@@ -1,0 +1,844 @@
+---
+title: "Untitled"
+author: "Abidemi"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+rm(list = ls())
+
+library(tidyverse)
+library(corrplot)
+library(caret)
+library(GGally)
+library(cvms)
+library('readr')
+library("lessR")
+library(readr)
+library("dplyr")
+library("psych")
+library("ggplot2")
+library("reshape2")
+library("corrr")
+library(dplyr)
+library(cvms)
+library(rpart)
+library(rpart.plot)
+library("Information")
+library(Information)
+
+
+
+```
+
+### Load in the dataset
+
+```{r}
+wbc_dataset <- read.csv('wbc_dataset.csv', header = TRUE)
+```
+
+#Objective 1
+```{r}
+wbc_dataset %>% View()
+```
+
+
+```{r}
+
+```
+
+### Dimension of the data
+
+```{r}
+wbc_dataset %>% ncol()
+
+wbc_dataset %>% nrow()
+
+wbc_dataset %>% dim()
+```
+
+### Column list of the data
+```{r}
+wbc_dataset %>% colnames()
+```
+
+### Structure of the data
+
+```{r}
+wbc_dataset %>% str()
+```
+
+### Check for missing values
+```{r}
+sum(is.na(wbc_dataset))
+colSums(is.na(wbc_dataset))
+```
+
+### Drop the ID column
+```{r}
+wbc_data <- wbc_dataset %>% select(-id)
+
+wbc_data %>% View()
+```
+
+### Statistical description of the data
+```{r}
+distinct(wbc_data)
+```
+
+```{r}
+describe(wbc_data)
+```
+
+## Check the class of the target variable
+```{r}
+class(wbc_data$diagnosis)
+```
+## Change the class of the target variable
+```{r}
+wbc_data$diagnosis = as.factor(as.character(wbc_data$diagnosis))
+
+class(wbc_data$diagnosis)
+
+#View(wbc_data$diagnosis)
+```
+
+#return the datatype of each column
+```{r}
+print(sapply(wbc_data, class))
+```
+
+### Group into numeric and categorical variable
+```{r}
+numeric_col <- select_if(wbc_data, is.numeric)
+View(numeric_col)
+categorical_col <- select_if(wbc_data, is.factor)
+View(categorical_col)
+```
+
+## Univariate Analysis
+
+### Distribution of the target variable
+```{r}
+Wbc_data <- wbc_data %>% select(diagnosis) %>% 
+  table() %>% prop.table() %>% round(2)
+
+print(wbc_data)
+```
+
+```{r}
+barplot(Wbc_data, col = c("blue", "pink"), 
+        main = "frequency distribution of Diagnosis" )
+```
+### Pie chart distribution of class variable
+```{r}
+y <- prop.table(table(wbc_data$diagnosis))*100
+colors <- terrain.colors(2)
+Y <- as.data.frame(y)
+label <- sprintf("%s - %.2f", Y[,1], y, "%")
+pie(y, labels = label, clockwise = TRUE, col = c("blue", "pink"),
+    radius = 1.2, cex = 0.8, main = "frequency distribution of Diagnosis")
+```
+
+### Group the 30 numeric columns based on the mean, standard error and worst
+
+```{r}
+wbc_mean <- wbc_data[ ,c("diagnosis","radius_mean", "texture_mean","perimeter_mean", 
+                         "area_mean", "smoothness_mean", "compactness_mean", "concavity_mean", 
+                         "concave.points_mean", "symmetry_mean", "fractal_dimension_mean" )]
+```
+
+
+```{r}
+is.data.frame(wbc_mean)
+
+class(wbc_mean$diagnosis)
+```
+```{r}
+wbc_se <- wbc_data[, c("diagnosis", "radius_se", "texture_se","perimeter_se", "area_se", 
+                       "smoothness_se", "compactness_se", "concavity_se", "concave.points_se",
+                       "symmetry_se", "fractal_dimension_se")]
+```
+
+
+```{r}
+wbc_worst <- wbc_data[ ,c("diagnosis", "radius_worst", "texture_worst","perimeter_worst",
+                          "area_worst", "smoothness_worst", "compactness_worst",
+                          "concavity_worst", "concave.points_worst", "symmetry_worst", 
+                          "fractal_dimension_worst" )]
+```
+
+#Show the distribution of the three groups relative to the class variable 
+
+```{r}
+wbc_mean %>%
+  melt(id.vars = "diagnosis") %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 10, aes(fill = diagnosis), alpha = 0.5) +
+  facet_wrap(~variable, scales = 'free_x') +
+  scale_fill_manual(values = c("blue", "pink")) 
+```
+
+```{r}
+wbc_se %>%
+  melt(id.vars = "diagnosis") %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 10, aes(fill = diagnosis), alpha = 0.5) +
+  facet_wrap(~variable, scales = 'free_x') +
+  scale_fill_manual(values = c("blue", "pink")) 
+```
+
+```{r}
+wbc_worst %>%
+  melt(id.vars = "diagnosis") %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 10, aes(fill = diagnosis), alpha = 0.5) +
+  facet_wrap(~variable, scales = 'free_x') +
+  scale_fill_manual(values = c("blue", "pink")) 
+```
+#Objective2
+
+## Correlation of the Indepedent variables 
+
+# View the correlation matrix
+```{r}
+#print(correlation_matrix)
+
+```
+
+# Create a data frame for plotting
+
+```{r}
+correlation <- cor(wbc_data %>% select(-diagnosis))
+correlation_DF <- as.data.frame(correlation)
+correlation_DF$variables <- rownames(correlation_DF)
+correlation_long <- reshape2::melt(correlation_DF, id.vars = "variables")
+```
+
+
+# Plotting correlations on a bar graph
+
+```{r}
+
+```
+
+
+```{r}
+ggplot(correlation_long, aes(x = variables, y = value)) +
+  geom_bar(stat = "identity", fill = "cornflowerblue") +
+  labs(title = "Correlation between Variables", x = "Variables", y = "Correlation") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_minimal()
+```
+## Training and Testing of Dataset
+### Divide into Training Nd Testing
+
+```{r}
+set.seed(1)
+library(caret)
+test_index <- createDataPartition(y = wbc_data$diagnosis, 
+                                  times = 1, p = 0.25, list = FALSE)
+train_set <-wbc_data[-test_index, ]
+test_set <- wbc_data[test_index, ]
+```
+
+## Reduce Dimensions Check for correlation
+
+```{r}
+ytr <- train_set %>% 
+  select(diagnosis) 
+
+
+Xtr <- train_set %>% 
+  select(-diagnosis)
+
+cor_df <- cor(Xtr)
+
+```
+
+### library(corrplot)
+```{r}
+
+corrplot(cor_df, title = 'Correlation Matrix', order = "hclust", tl.cex = 1, addrect = 4)
+```
+
+## Drop highly correlated variables
+
+```{r}
+corDrop <- findCorrelation(cor_df, cutoff = 0.7)
+
+new_wbcDF <-  Xtr %>% select(-names(Xtr)[corDrop])
+```
+
+## Examine the new df
+
+```{r}
+train_df <- bind_cols(ytr, new_wbcDF)
+
+test_df <- test_set %>% select(-names(Xtr)[corDrop])
+```
+
+## Exploring the train dataset
+
+```{r}
+library(DataExplorer)
+
+plot_str(train_df) ## Plot structure
+
+introduce(train_df)
+
+plot_missing(train_df) 
+
+plot_intro(train_df)
+
+
+plot_histogram(train_df)
+```
+
+##
+```{r}
+library(tidyverse)
+
+ggplot(gather(train_df %>% select(-diagnosis)), aes(value)) + 
+  geom_histogram(bins = 10, color = 'black') + 
+  facet_wrap(~key, scales = 'free_x')
+```
+
+
+```{r}
+plot_bar(train_df)
+
+train_df %>%
+  melt(id.vars = "diagnosis") %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 10, aes(fill = diagnosis), alpha = 0.5) +
+  facet_wrap(~variable, scales = 'free_x') +
+  scale_fill_manual(values = c("blue", "pink")) 
+```
+
+## 
+```{r}
+ggplot(train_df , aes(x = diagnosis, fill = diagnosis)) +
+  geom_bar() + ggtitle("Distribution of Breast Cancer") + theme_bw()
+```
+
+##
+```{r}
+library(GGally)
+ggpairs(train_df, aes(colour=diagnosis)) + theme_bw()
+```
+
+### Define my own color palette for the diagnosis levels
+```{r}
+
+my_colors <- c("M" = "pink", "B" = "blue")  
+```
+
+# Scatterplot matrix with colors based on 'diagnosis'
+```{r}
+ggpairs(train_df, aes(colour = diagnosis)) +
+  theme_bw() +
+  scale_color_manual(values = my_colors)
+ggpairs(train_df, columns = 1: (ncol(train_set) - 1),
+        ggplot2::aes(colour = diagnosis)) + theme_bw()
+
+
+```
+
+
+```{r}
+plot_correlation(train_df %>% select(-diagnosis))
+```
+
+#
+```{r}
+train_df$diagnosis <- ifelse(train_df$diagnosis == 'M', 1, 0)
+train_df$diagnosis <- as.factor(train_df$diagnosis)
+
+train_df$diagnosis
+
+test_df$diagnosis <- ifelse(test_df$diagnosis == 'M', 1, 0)
+test_df$diagnosis <- as.factor(test_df$diagnosis)
+```
+
+## Scaling!
+```{r}
+means <- apply(train_df %>% select(-diagnosis), 2, mean)
+sds <- apply(train_df %>% select(-diagnosis), 2, sd)
+
+scaled_train <- train_df %>% select(-diagnosis) %>% scale() 
+scaled_train <- cbind(train_df['diagnosis'], scaled_train)
+
+
+scaled_test <- test_df %>% select(-diagnosis) %>% scale(center = means, scale = sds) 
+scaled_test <- cbind(test_df['diagnosis'], scaled_test)
+```
+
+#Objective 4
+
+## Logistic Regression
+```{r}
+logit_model <- glm(diagnosis ~., data = scaled_train, family = binomial())
+
+summary(logit_model)
+
+
+prediction <- predict(logit_model, scaled_test[,-1], type = 'response')
+prediction <- ifelse(prediction > 0.5,1,0)
+
+
+test_pred = predict(logit_model, scaled_test, type = "response")
+View(test_pred)
+
+
+
+
+```
+
+```{r}
+conf_LR <- caret::confusionMatrix(data = factor(prediction), reference = scaled_test[,1], positive = '1')
+conf_LR
+```
+
+#Miscalculationerror
+```{r}
+
+conf_mat <- as_tibble(table(predicted = prediction, actual = scaled_test[,1]))
+
+
+tab <- table(prediction, scaled_test$diagnosis)
+
+
+print(tab)
+
+
+1 - sum(diag(tab))/sum(tab)
+```
+
+
+
+```{r}
+library(pROC)
+
+
+test_roc = roc(scaled_test$diagnosis ~ test_pred, plot = TRUE, print.auc = TRUE)
+as.numeric(test_roc$auc)
+
+
+
+
+
+```
+
+
+```{r}
+library(cvms)
+
+
+plot_confusion_matrix(conf_mat,
+                      target_col = "actual",
+                      prediction_col = "predicted",
+                      counts_col = 'n')
+
+
+
+```
+
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+## Plot Variable Importance
+```{r}
+importance <- data.frame(logit_model$coefficients[-1])
+colnames(importance) <- c("Importance")
+
+importance %>%
+  ggplot(aes(x = rownames(importance), 
+             y = Importance)) +
+  geom_bar(stat = "identity") +
+  ylab("Importance") + xlab("Variable") +theme_bw() + coord_flip()
+```
+## Random Forest
+
+
+```{r}
+library(randomForest)
+set.seed(222)
+rf <- randomForest(diagnosis~., scaled_train)
+
+#view RF attribute
+print(rf)
+attributes(rf)
+rf$predicted
+rf$confusion
+plot(rf)
+
+
+```
+
+
+```{r}
+library(caret)
+
+
+predict_rf <- predict(rf, scaled_test, "response")
+head(predict_rf)
+head(scaled_test$diagnosis)
+conf_rf <- confusionMatrix(predict_rf, scaled_test$diagnosis)
+conf_rf
+
+
+table(predict_rf, scaled_test$diagnosis)
+```
+
+
+```{r}
+conf_rf <- as_tibble(table(predicted = predict_rf, actual = scaled_test[,1]))
+conf_rf
+plot_confusion_matrix(conf_mat,
+                      target_col = "actual",
+                      prediction_col = "predicted",
+                      counts_col = 'n')
+
+```
+
+
+```{r}
+library(pROC)
+predictions <- as.numeric(predict_rf, type="response")
+
+
+auc(scaled_test$diagnosis, predictions)
+tree.roc <- roc(scaled_test$diagnosis ~ predictions, plot=TRUE, print.auc = TRUE)
+```
+
+
+# RF tuned data
+
+## Model
+```{r}
+set.seed(122)
+rF <- randomForest(diagnosis~., scaled_train,
+                   ntree = 265, mtry = 2, imprtance = TRUE, proximity = TRUE)
+
+
+
+
+library(caret)
+prediction_rF <- predict(rF, scaled_test)
+head(prediction_rF)
+head(scaled_test$diagnosis)
+conf_rF <- confusionMatrix(prediction_rF, scaled_test$diagnosis)
+conf_rF
+
+
+```
+
+## Prediction
+```{r}
+table(prediction_rF, scaled_test$diagnosis)
+
+
+
+predictions <- as.numeric(prediction_rF, type="response")
+pred <- prediction(predictions, scaled_test$diagnosis)
+perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+plot(perf, col=rainbow(28))
+
+
+
+```
+## Plot AUC
+
+```{r}
+
+library(ROCR)
+library(pROC)
+#auc<- performance(pred,"auc")
+
+test_ROC <- roc(scaled_test$diagnosis ~ predictions, plot = TRUE, print.auc = TRUE)
+print(auc)
+```
+
+
+#Misscalculation error for RF tuned data
+```{r}
+tab <- table(prediction_rF, scaled_test$diagnosis)
+
+
+print(tab)
+
+
+1 - sum(diag(tab))/sum(tab)
+```
+
+# Variable Importance for RF tuned data
+```{r}
+varImpPlot(rF)
+
+
+importance(rF)
+
+
+varUsed(rF)
+```
+# Decision Tree Model
+
+```{r}
+library(rpart)
+
+dt <- rpart(diagnosis~., data = scaled_train)
+
+library(rpart.plot)
+
+rpart.plot(dt)
+
+```
+
+
+## Prediction
+```{r}
+prediction_dt <- predict(dt, scaled_test, type = "class")
+
+
+prediction_dt
+
+```
+
+
+```{r}
+tab <- table(prediction_dt, scaled_test$diagnosis)
+print(tab)
+
+```
+
+
+```{r}
+conf_dt <- confusionMatrix(prediction_dt, scaled_test$diagnosis)
+
+
+conf_dt
+
+```
+
+### Miscalculation error for DT train data
+```{r}
+
+mce_dt <- 1 - sum(diag(tab))/sum(tab)
+
+
+mce_dt
+
+```
+
+```{r}
+library(pROC)
+predictions <- as.numeric(prediction_dt, type="response")
+
+
+auc(scaled_test$diagnosis, predictions)
+tree.roc <- roc(scaled_test$diagnosis ~ predictions, plot=TRUE, print.auc = TRUE)
+```
+
+
+
+# Decision Tree Tuned data
+```{r}
+
+library(rpart)
+
+dt_tune <- rpart(diagnosis~area_mean+concavity_se+fractal_dimension_mean, data = scaled_test)
+
+library(rpart.plot)
+
+rpart.plot(dt_tune)
+
+```
+
+##Predict
+```{r}
+
+prediction_DT <- predict(dt_tune, type = "class")
+
+
+prediction_DT
+
+```
+
+
+```{r}
+tab <- table(prediction_DT, scaled_test$diagnosis)
+print(tab)
+
+```
+
+## DT Confusion Matrix -  tuned data
+```{r}
+conf_DT <- confusionMatrix(prediction_DT, scaled_test$diagnosis)
+
+
+conf_DT
+
+```
+
+### Miscalculation error for tuned data
+```{r}
+mce_dt <- 1 - sum(diag(tab))/sum(tab)
+
+mce_dt
+
+```
+
+```{r}
+library(pROC)
+predictions <- as.numeric(prediction_DT, type="response")
+
+
+auc(scaled_test$diagnosis, predictions)
+tree.roc <- roc(scaled_test$diagnosis ~ predictions, plot=TRUE, print.auc = TRUE)
+```
+
+
+#SUPPORT VECTOR MACHINE Model
+```{r}
+set.seed(17)
+library(e1071)
+Svm <- svm(diagnosis~., data=scaled_train, kernel = "linear", scale= FALSE)
+
+```
+
+
+```{r}
+prediction <- predict(Svm, scaled_test)
+library(caret)
+conf_svm <- confusionMatrix(prediction, scaled_test$diagnosis, positive = "1")
+conf_svm
+```
+## Miscalculation Error - SVM
+```{r}
+tab <- table(prediction, scaled_test$diagnosis)
+print(tab)
+1 - sum(diag(tab))/sum(tab)
+```
+
+```{r}
+library(pROC)
+predictions <- as.numeric(prediction, type="response")
+
+
+auc(scaled_test$diagnosis, predictions)
+tree.roc <- roc(scaled_test$diagnosis ~ predictions, plot=TRUE, print.auc = TRUE)
+```
+
+
+
+# SVM tuned data
+```{r}
+model =  svm(diagnosis~., data = scaled_train, kernel= "sigmoid")
+
+
+summary(model)
+
+```
+
+###Confusion Matrix
+```{r}
+pred <- predict(model, scaled_test)
+tab <- table(Predicted = pred, Actual = scaled_test$diagnosis)
+tab
+1 - sum(diag(tab))/sum(tab)
+
+```
+
+### Misclassification Error
+```{r}
+conf_SVM <- confusionMatrix(pred, scaled_test$diagnosis, positive = "1")
+conf_SVM
+```
+
+```{r}
+library(pROC)
+predictions <- as.numeric(pred, type="response")
+
+
+auc(scaled_test$diagnosis, predictions)
+tree.roc <- roc(scaled_test$diagnosis ~ predictions, plot=TRUE, print.auc = TRUE)
+```
+
+
+
+# Evaluation
+```{r}
+
+library(caret)
+library(mlbench)
+
+# prepare training scheme
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+```
+
+
+```{r}
+# Logistic Regression
+set.seed(7)
+fit.glm <- train(diagnosis~., data=wbc_data, method="glm", trControl=control)
+
+
+```
+
+
+```{r}
+# Random Forest
+set.seed(7)
+fit.rf <- train(diagnosis~., data=wbc_data, method="rf", trControl=control)
+
+```
+
+
+```{r}
+# Decision tree
+set.seed(7)
+fit.rpart <- train(diagnosis~., data=wbc_data, method="rpart", trControl=control)
+
+```
+
+
+```{r}
+# svm
+set.seed(7)
+fit.svm_linear <- train(diagnosis ~ ., data = wbc_data, method = "svmLinear", trControl = control)
+
+
+```
+
+```{r}
+results <- resamples(list(LR=fit.glm, RF=fit.rf, DT=fit.rpart, svm=fit.svm_linear))
+
+
+summary(results)
+
+```
+
+# dot plots of accuracy
+```{r}
+scales <- list(x=list(relation="free"), y=list(relation="free"))
+dotplot(results, scales=scales)
+```
+
